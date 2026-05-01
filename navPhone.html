@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Навь</title>
+
+<style>
+body {
+  background:#111;
+  color:#fff;
+  font-family:Arial;
+  margin:0;
+  padding:10px;
+}
+
+h1 { text-align:center; }
+
+button {
+  width:100%;
+  padding:12px;
+  margin:5px 0;
+  font-size:16px;
+}
+
+.box {
+  border:1px solid #555;
+  padding:10px;
+  margin:10px 0;
+  border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Навь</h1>
+
+<div class="box">
+  <h3>Игрок</h3>
+  <div id="player"></div>
+  <div id="bag"></div>
+</div>
+
+<div class="box">
+  <h3 id="locTitle"></h3>
+  <div id="desc"></div>
+  <div id="enemy"></div>
+</div>
+
+<button onclick="attack()">Атаковать</button>
+
+<div class="box">
+  <h3>Локации</h3>
+  <button onclick="move('city')">Город</button>
+  <button onclick="move('field')">Поляна</button>
+  <button onclick="move('forest')">Лес</button>
+  <button onclick="move('cave')">Пещера</button>
+</div>
+
+<div class="box" id="shop" style="display:none;">
+  <h3>Магазин</h3>
+  <button onclick="buy('dmg')">+5 урон (20)</button>
+  <button onclick="buy('hp')">+10 HP (20)</button>
+  <button onclick="buy('agi')">+1 ловкость (20)</button>
+  <button onclick="sell()">Продать всё</button>
+</div>
+
+<div class="box">
+  <h3>Инвентарь</h3>
+  <div id="inv"></div>
+</div>
+
+<script>
+
+// ===== ИГРОК =====
+let p = {
+  hp:100,max:100,dmg:10,agi:10,
+  gold:0,lvl:1,xp:0,
+  bag:10
+};
+
+let inv = [];
+let loc = "city";
+let enemy = null;
+
+// ===== ВРАГИ =====
+function spawn() {
+  if(loc==="field") enemy={name:"Слизень",hp:50,max:50};
+  else if(loc==="forest") enemy={name:"Волк",hp:60,max:60};
+  else if(loc==="cave") enemy={name:"Гоблин",hp:70,max:70};
+  else enemy=null;
+}
+
+// ===== UI =====
+function update() {
+
+document.getElementById("player").innerText =
+`HP ${Math.floor(p.hp)}/${p.max} | Урон ${p.dmg} | Ловкость ${p.agi} | Золото ${p.gold} | Ур ${p.lvl}`;
+
+document.getElementById("bag").innerText =
+`Инвентарь ${inv.length}/${p.bag}`;
+
+document.getElementById("inv").innerText =
+inv.length ? inv.join(", ") : "пусто";
+
+let title="",desc="",enemyText="";
+
+if(loc==="city"){
+title="Город";
+desc="Вы в безопасном городе. Можно торговать и отдыхать.";
+document.getElementById("shop").style.display="block";
+enemyText="Врагов нет";
+}
+if(loc==="field"){
+title="Поляна";
+desc="Вы видите слизня среди травы.";
+document.getElementById("shop").style.display="none";
+enemyText = enemy ? `${enemy.name} HP ${enemy.hp}/${enemy.max}` : "";
+}
+if(loc==="forest"){
+title="Лес";
+desc="Тёмный лес. Из кустов выходит волк.";
+document.getElementById("shop").style.display="none";
+enemyText = enemy ? `${enemy.name} HP ${enemy.hp}/${enemy.max}` : "";
+}
+if(loc==="cave"){
+title="Пещера";
+desc="Тесно и темно. Гоблин наблюдает за вами.";
+document.getElementById("shop").style.display="none";
+enemyText = enemy ? `${enemy.name} HP ${enemy.hp}/${enemy.max}` : "";
+}
+
+document.getElementById("locTitle").innerText=title;
+document.getElementById("desc").innerText=desc;
+document.getElementById("enemy").innerText=enemyText;
+
+}
+
+// ===== ПЕРЕМЕЩЕНИЕ =====
+function move(l){
+loc=l;
+spawn();
+update();
+}
+
+// ===== ЛУТ =====
+function dropLoot(){
+if(inv.length>=p.bag) return;
+
+if(loc==="field") inv.push("ромашка");
+if(loc==="forest") inv.push(Math.random()<0.5?"клык":"мех");
+if(loc==="cave") inv.push(Math.random()<0.5?"руда":"ухо гоблина");
+}
+
+// ===== АТАКА =====
+function attack(){
+
+if(!enemy){
+alert("Здесь некого атаковать");
+return;
+}
+
+let dmg=p.dmg;
+
+if(loc==="cave") dmg*=0.9;
+
+if(Math.random()<p.agi/100){
+dmg*=2;
+alert("ДВОЙНОЙ УДАР!");
+}
+
+enemy.hp-=dmg;
+
+if(enemy.hp<=0){
+alert(enemy.name+" побеждён!");
+
+p.gold+=10;
+p.xp+=10;
+
+dropLoot();
+
+if(p.xp>=p.lvl*50){
+p.xp=0;
+p.lvl++;
+p.max+=10;
+p.dmg+=5;
+p.agi+=1;
+p.hp=p.max;
+p.bag+=1;
+alert("Уровень повышен!");
+}
+
+spawn();
+}
+
+update();
+}
+
+// ===== ВРАГ АТАКУЕТ =====
+function enemyAttack(){
+
+let dodge=p.agi/100;
+if(loc==="forest") dodge*=0.9;
+
+if(Math.random()<dodge){
+alert("Ты уклонился!");
+return;
+}
+
+p.hp-=5;
+
+if(p.hp<=0){
+alert("Ты погиб");
+p.hp=p.max;
+move("city");
+}
+
+}
+
+// ===== МАГАЗИН =====
+function buy(t){
+if(p.gold<20) return;
+
+p.gold-=20;
+
+if(t==="dmg") p.dmg+=5;
+if(t==="hp"){p.max+=10;p.hp=p.max;}
+if(t==="agi") p.agi+=1;
+
+update();
+}
+
+// ===== ПРОДАЖА =====
+function sell(){
+let gold=0;
+
+inv.forEach(i=>{
+if(i==="ромашка") gold+=3;
+if(i==="клык") gold+=8;
+if(i==="мех") gold+=5;
+if(i==="руда") gold+=12;
+if(i==="ухо гоблина") gold+=10;
+});
+
+p.gold+=gold;
+inv=[];
+
+alert("Продано на "+gold);
+update();
+}
+
+// ===== РЕГЕН =====
+setInterval(()=>{
+let r=p.max*0.01;
+if(loc==="city") r*=1.5;
+
+p.hp=Math.min(p.max,p.hp+r);
+update();
+},1000);
+
+// ===== СТАРТ =====
+spawn();
+update();
+
+</script>
+
+</body>
+</html>
